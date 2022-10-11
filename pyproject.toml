@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "social-utility"
+version = "0.1.0"
+description = ""
+authors = ["gvx3 <ginjewel103@gmail.com>"]
+readme = "README.md"
+packages = [{include = "social_utility"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask = "2.2.2"
+flask-marshmallow = "0.14.0"
+flask-migrate = "3.1.0"
+flask-sqlalchemy = "2.5.1"
+marshmallow = "3.18.0"
+marshmallow-sqlalchemy = "0.28.1"
+psycopg2-binary = "2.9.3"
+python-dotenv = "0.21.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
