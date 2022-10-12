@@ -43,7 +43,31 @@ def test_request():
 @bp.route('/authorize')
 def authorize():
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRET_FILE, scopes=SCOPES)
-    flask.url_for()
+    flow.redirect_uri = flask.url_for('api.oauth2callback', _external=True)
+
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scope='true'
+    )
+
+    flask.session['state'] = state
+
+    return flask.redirect(authorization_url)
+
+
+@bp.route('/oauth2callback')
+def oauth2callback():
+    state = flask.session['state']
+    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRET_FILE, scopes=SCOPES, state=state)
+    flow.redirect_uri = flask.url_for('oauth2callback', _external=True)
+
+    authorization_response = flask.request.url
+    flow.fetch_token(authorization_response=authorization_response)
+    credentials = flow.credentials
+    flask.session['credentials'] = credentials_to_dict(credentials)
+
+    return flask.redirect(flask.url_for('test_request'))
+
 
 @bp.route('/hello')
 def hello_world():
@@ -51,8 +75,6 @@ def hello_world():
     # yt_url_channels = "https://www.googleapis.com/youtube/v3/channels"
 
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(CLIENT_SECRET_FILE, scopes=SCOPES)
-    if os.path.exists(CLIENT_SECRET_FILE):
-        print(f'Path to client_secret json file: {CLIENT_SECRET_FILE}')
 
     flow.redirect_uri('http://127.0.0.1:5000/api/blank')
 
@@ -64,6 +86,9 @@ def hello_world():
     youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=CLIENT_SECRET_FILE)
     request = youtube.subscriptions().list().execute()
     print(request)
+
+
+
 
 
 @bp.route('/blank')
