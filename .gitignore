@@ -3,3 +3,5 @@
 .idea/
 poetry.lock
 **/__pycache__/
+*.json
+client_secret_*.json
