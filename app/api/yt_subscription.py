@@ -1,5 +1,3 @@
-import os
-
 import flask
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -15,8 +13,8 @@ API_VERSION = 'v3'
 CLIENT_SECRET_FILE = Config.CLIENT_CREDENTIAL
 
 
-@bp.route('/test')
-def test_request():
+@bp.route('/subscriptions')
+def list_subscriptions():
     if 'credentials' not in flask.session:
         return flask.redirect('authorize')
 
@@ -65,7 +63,7 @@ def oauth2callback():
     credentials = flow.credentials
     flask.session['credentials'] = credentials_to_dict(credentials)
 
-    return flask.redirect(flask.url_for('api.test_request'))
+    return flask.redirect(flask.url_for('api.list_subscriptions'))
 
 
 @bp.route('/redirect')
