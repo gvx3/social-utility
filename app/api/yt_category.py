@@ -5,11 +5,11 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from app.api import bp
 from flask import request, jsonify
 
-from app.dto.yt_category_dto import CategorySchema
+from app.dto.yt_category_dto import CategoryCreationSchema
 from app.extensions import db
 from app.models import Category
 
-categorySchema = CategorySchema()
+categorySchema = CategoryCreationSchema()
 category = Category()
 
 

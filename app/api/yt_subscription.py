@@ -66,12 +66,6 @@ def oauth2callback():
     return flask.redirect(flask.url_for('api.list_subscriptions'))
 
 
-@bp.route('/redirect')
-def test():
-    print(flask.url_for('api.oauth2callback'))
-    return {"Redirected": "Redirected"}
-
-
 def credentials_to_dict(credentials):
     return {'token': credentials.token,
               'refresh_token': credentials.refresh_token,
