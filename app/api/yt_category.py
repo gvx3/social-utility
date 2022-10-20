@@ -10,14 +10,13 @@ from app.extensions import db
 from app.models import Category
 
 categorySchema = CategoryCreationSchema()
-category = Category()
 
 
 @bp.route('/category/<int:_id>', methods=['GET'])
 def list_category(_id):
-    stmt = select(Category).where(Category.id == _id)
     try:
-        one_category = db.session.execute(stmt).scarlars().one()
+        stmt = select(Category).where(Category.id == _id)
+        one_category = db.session.execute(stmt).scalars().one()
     except NoResultFound as e:
         return jsonify({"message": f"{e}"}), 400
 
@@ -27,8 +26,8 @@ def list_category(_id):
 
 @bp.route('/categories', methods=['GET'])
 def list_categories():
-    stmt = select(category)
-    categories = db.session.execute(stmt).scarlars()
+    stmt = select(Category)
+    categories = db.session.execute(stmt).scalars()
     result = categorySchema.dump(categories, many=True)
     return jsonify(result)
 
@@ -50,11 +49,24 @@ def create_category():
     return jsonify(result)
 
 
-@bp.route('/categories', methods=['PUT'])
-def update_category():
-    pass
+@bp.route('/category/<int:_id>', methods=['PUT'])
+def update_category(_id):
+    data = request.get_json()
+    try:
+        stmt = select(Category).where(Category.id == _id)
+        current_category = db.session.execute(stmt).scalars().one()
+        update_object = categorySchema.load(data)
+        current_category.set_category(update_object.name, update_object.description)
+        db.session.commit()
+    except NoResultFound as e:
+        return jsonify({"message": f"{e}"}), 400
+    except ValidationError as e:
+        return jsonify(e.messages_dict), 400
+
+    result = categorySchema.dump(current_category)
+    return jsonify(result)
 
 
 @bp.route('/category/<int:_id>', methods=['DELETE'])
-def delete_category():
+def delete_category(_id):
     pass

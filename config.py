@@ -16,3 +16,4 @@ class Config:
     DB_USER = os.environ.get('DB_USER')
     DB_PASS = os.environ.get('DB_PASS')
     SQLALCHEMY_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}"
+    JSON_SORT_KEYS = False
