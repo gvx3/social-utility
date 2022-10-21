@@ -3,7 +3,7 @@ from sqlalchemy import select, delete, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from app.api import bp
-from flask import request, jsonify
+from flask import request
 
 from app.dto.yt_category_dto import CategoryCreationSchema
 from app.extensions import db
