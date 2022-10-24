@@ -17,3 +17,28 @@ class Category(db.Model):
     def __repr__(self):
         return f'<Category: {self.name}>'
 
+
+class SubscriptionChannel(db.Model):
+    __tablename__ = "subscription_channels"
+
+    id = db.Column(db.Integer, primary_key=True)
+    subscription_etag = db.Column(db.Text, nullable=False)
+    subscription_id = db.Column(db.Text, unique=True, nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    published_at = db.Column(db.DateTime)
+    resource_kind = db.Column(db.String(30))
+    resource_channel_id = db.Column(db.String(30), unique=True, nullable=False)
+    snippet_channel_id = db.Column(db.String(30), unique=True, nullable=False)
+    thumbnails_default_url = db.Column(db.Text)
+    thumbnails_medium_url = db.Column(db.Text)
+    thumbnails_high_url = db.Column(db.Text)
+    total_item_count = db.Column(db.Integer)
+    newItemCount = db.Column(db.Integer)
+
+    def __repr__(self):
+        return f'<Category: {self.title}>'
+
+
+
+
