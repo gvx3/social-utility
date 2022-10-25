@@ -3,6 +3,8 @@ import json
 from flask import redirect, session, url_for, jsonify, request
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
+
+from app.dto.yt_subscription_channel_dto import SubscriptionChannelSchema
 from config import Config
 from app.api import bp
 import google.oauth2.credentials
@@ -13,10 +15,11 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 CLIENT_SECRET_FILE = Config.CLIENT_CREDENTIAL
+subscriptionChannel = SubscriptionChannelSchema()
 
 
-@bp.route('/list_subscriptions')
-def list_subscriptions():
+@bp.route('/fetch_subscriptions')
+def fetch_subscriptions():
     if 'credentials' not in session:
         return redirect('authorize')
 
@@ -25,31 +28,39 @@ def list_subscriptions():
         **session['credentials'])
 
     youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
-    extra_parameters = {"part": "snippet, contentDetails", "maxResults": 50, "mine": True, "pageToken": "CPoBEAA"}
-    yt_request = youtube.subscriptions().list(
-        part=extra_parameters['part'],
-        maxResults=extra_parameters['maxResults'],
-        mine=extra_parameters['mine'],
-        pageToken=extra_parameters['pageToken']
-    ).execute()
+    extra_parameters = {"part": "snippet, contentDetails", "maxResults": 50, "mine": True, "pageToken": ""}
+    list_data = []
+    while True:
+        print("=======Call Youtube API=======")
+        yt_request = youtube.subscriptions().list(
+            part=extra_parameters['part'],
+            maxResults=extra_parameters['maxResults'],
+            mine=extra_parameters['mine'],
+            pageToken=extra_parameters['pageToken']
+        ).execute()
 
-    # while True:
-    #     yt_request = youtube.subscriptions().list(
-    #         part=extra_parameters['part'],
-    #         maxResults=extra_parameters['maxResults'],
-    #         mine=extra_parameters['mine'],
-    #         pageToken=extra_parameters['pageToken']
-    #     ).execute()
-    #
-    #     with open(Config.YT_DATA, 'w') as f:
-    #         json.dump(yt_request, f)
-    #
-    #     next_page_token = yt_request['nextPageToken']
-    #     if next_page_token != "":
-    #         print(f"======{next_page_token}======")
-    #         extra_parameters['pageToken'] = next_page_token
-    #     else:
-    #         break
+        list_data.append(yt_request)
+        if "nextPageToken" in yt_request:
+            next_page_token = yt_request['nextPageToken']
+            print(f"======{next_page_token}======")
+            extra_parameters['pageToken'] = next_page_token
+        else:
+            print("=======No more pageToken=======")
+            break
+
+    print("=======Write to json file=======")
+    # append file mode
+    with open(Config.YT_DATA, 'a') as f:
+        for yt_page in list_data:
+            json_object = json.dumps(yt_page, indent=4)
+            f.write(json_object)
+    print("=======Done writing to json file=======")
+
+    for yt_page in list_data:
+        for item in yt_page['item']:
+            channel = subscriptionChannel.load(item)
+
+
 
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
@@ -57,6 +68,11 @@ def list_subscriptions():
     session['credentials'] = credentials_to_dict(credentials)
 
     return jsonify(**yt_request)
+
+
+@bp.route('/list_subscriptions')
+def list_subscription():
+    pass
 
 
 @bp.route('/authorize')

@@ -34,7 +34,6 @@ class SubscriptionChannel(db.Model):
     thumbnails_medium_url = db.Column(db.Text)
     thumbnails_high_url = db.Column(db.Text)
     total_item_count = db.Column(db.Integer)
-    newItemCount = db.Column(db.Integer)
 
     def __repr__(self):
         return f'<Category: {self.title}>'
