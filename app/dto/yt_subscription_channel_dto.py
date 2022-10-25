@@ -7,15 +7,20 @@ class SubscriptionChannelSnippetSchema(Schema):
     class Meta:
         ordered = True
 
-    title = fields.Str(required=True)
-    description = fields.Str()
+    title = fields.Str(required=True, data_key="title")
+    description = fields.Str(data_key="description")
     published_at = fields.DateTime(format='%Y-%m-%dT%H:%M:%S%z', data_key="publishedAt")
-    resource_kind = fields.Str()
-    resource_channel_id = fields.Str(required=True)
-    snippet_channel_id = fields.Str(required=True)
-    thumbnails_default_url = fields.Str()
-    thumbnails_medium_url = fields.Str()
-    thumbnails_high_url = fields.Str()
+    resource_kind = fields.Str(data_key="kind")
+    resource_channel_id = fields.Str(required=True, data_key="channelId")
+    snippet_channel_id = fields.Str(required=True, data_key="channelId")
+    thumbnails_default_url = fields.Str(data_key="url")
+    thumbnails_medium_url = fields.Str(data_key="url")
+    thumbnails_high_url = fields.Str(data_key="url")
+
+    @pre_load()
+    def get_snippet_data(self, data):
+        channel_detail = data.pop('snippet')
+        return channel_detail
 
 
 class SubscriptionChannelSchema(Schema):
