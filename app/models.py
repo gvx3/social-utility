@@ -36,7 +36,13 @@ class SubscriptionChannel(db.Model):
     total_item_count = db.Column(db.Integer)
 
     def __repr__(self):
-        return f'<Category: {self.title}>'
+        return f'''
+            <SubscriptionChannel: Title: {self.title} 
+            -- ID: {self.subscription_id}
+            -- Etag: {self.subscription_etag}
+            -- Published at: {self.published_at}
+            -- ChannelId: {self.snippet_channel_id}
+        >'''
 
 
 

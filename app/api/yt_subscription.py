@@ -3,12 +3,13 @@ import json
 from flask import redirect, session, url_for, jsonify, request
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
+from marshmallow import EXCLUDE
 
 from app.dto.yt_subscription_channel_dto import SubscriptionChannelSchema
 from config import Config
 from app.api import bp
 import google.oauth2.credentials
-
+from pprint import pprint
 
 SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 
@@ -57,9 +58,10 @@ def fetch_subscriptions():
     print("=======Done writing to json file=======")
 
     for yt_page in list_data:
-        for item in yt_page['item']:
-            channel = subscriptionChannel.load(item)
-
+        for item in yt_page['items']:
+            channel = subscriptionChannel.load(item, many=False)
+            pprint("======================")
+            pprint(channel)
 
 
     # Save credentials back to session in case access token was refreshed.
