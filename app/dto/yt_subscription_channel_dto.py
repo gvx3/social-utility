@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, post_load, pre_load, EXCLUDE
+from marshmallow import Schema, fields, post_load, pre_load, EXCLUDE, RAISE
 
 from app.models import SubscriptionChannel
 

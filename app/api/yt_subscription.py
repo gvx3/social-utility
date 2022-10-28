@@ -3,9 +3,13 @@ import json
 from flask import redirect, session, url_for, jsonify, request
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, ValidationError
+from sqlalchemy import select
 
+from app.messages import JsonResponse
+from app.extensions import db
 from app.dto.yt_subscription_channel_dto import SubscriptionChannelSchema
+from app.models import SubscriptionChannel
 from config import Config
 from app.api import bp
 import google.oauth2.credentials
@@ -16,7 +20,7 @@ SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
 API_SERVICE_NAME = 'youtube'
 API_VERSION = 'v3'
 CLIENT_SECRET_FILE = Config.CLIENT_CREDENTIAL
-subscriptionChannel = SubscriptionChannelSchema()
+subscriptionChannelSchema = SubscriptionChannelSchema()
 
 
 @bp.route('/fetch_subscriptions')
@@ -59,11 +63,16 @@ def fetch_subscriptions():
 
     for yt_page in list_data:
         for item in yt_page['items']:
-            channel = subscriptionChannel.load(item, many=False)
-            pprint("======================")
-            pprint(channel)
-
-
+            try:
+                channel = subscriptionChannelSchema.load(item, many=False)
+                pprint("======================")
+                pprint(channel)
+                db.session.add(channel)
+            except ValidationError as e:
+                db.session.rollback()
+                return JsonResponse.message(e), 400
+    db.session.commit()
+    # return JsonResponse.message_json()
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
     #              credentials in a persistent database instead.
@@ -74,7 +83,10 @@ def fetch_subscriptions():
 
 @bp.route('/list_subscriptions')
 def list_subscription():
-    pass
+    stmt = select(SubscriptionChannel)
+    subscription_channel = db.session.execute(stmt).scalars()
+    result = subscriptionChannelSchema.dump(subscription_channel, many=True)
+    return JsonResponse.message_json(result)
 
 
 @bp.route('/authorize')
