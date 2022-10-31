@@ -1,6 +1,6 @@
 # social-utility
 
-An app to retrieve youtube data.
+An app to retrieve youtube data and categorize it.
 
 Setup:
 1. Go to console of Google Cloud and search for "APIs & Services" service
