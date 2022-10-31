@@ -1,9 +1,9 @@
-from marshmallow import Schema, fields, post_load, pre_load, EXCLUDE, RAISE
+from marshmallow import Schema, fields, post_load, pre_load, EXCLUDE, RAISE, post_dump, pre_dump
 
 from app.models import SubscriptionChannel
 
 
-class SubscriptionChannelSchema(Schema):
+class SubscriptionChannelFetchSchema(Schema):
     class Meta:
         ordered = True
         unknown = EXCLUDE
@@ -20,7 +20,6 @@ class SubscriptionChannelSchema(Schema):
     thumbnails_default_url = fields.Str(data_key="thumbnails_default_url")
     thumbnails_medium_url = fields.Str(data_key="thumbnails_medium_url")
     thumbnails_high_url = fields.Str(data_key="thumbnails_high_url")
-
     total_item_count = fields.Int(data_key="total_item_count")
 
     @pre_load()
@@ -53,6 +52,33 @@ class SubscriptionChannelSchema(Schema):
         return SubscriptionChannel(**data)
 
 
+class SubscriptionChannelSchema(Schema):
+    class Meta:
+        ordered = True
+
+    id = fields.Int(dump_only=True)
+    subscription_etag = fields.Str(required=True, data_key="subscription_etag")
+    subscription_id = fields.Str(required=True, data_key="subscription_id")
+    title = fields.Str(required=True, data_key="title")
+    description = fields.Str(data_key="description")
+    published_at = fields.DateTime()
+    resource_kind = fields.Str(data_key="resource_kind")
+    resource_channel_id = fields.Str(required=True, data_key="resource_channel_id")
+    snippet_channel_id = fields.Str(required=True)
+    thumbnails_default_url = fields.Str(data_key="thumbnails_default_url")
+    thumbnails_medium_url = fields.Str(data_key="thumbnails_medium_url")
+    thumbnails_high_url = fields.Str(data_key="thumbnails_high_url")
+    total_item_count = fields.Int(data_key="total_item_count")
+    category_id = fields.Int(data_key="category_id")
 
 
+class SubscriptionChannelUpdateCategorySchema(Schema):
+    class Meta:
+        ordered = True
+        unknown = EXCLUDE
 
+    category_id = fields.Int(data_key="category_id")
+
+    @post_load()
+    def update_subscription_channel(self, data, **kwargs):
+        return SubscriptionChannel(**data)

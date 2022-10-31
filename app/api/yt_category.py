@@ -53,6 +53,10 @@ def create_category():
 def update_category(_id):
     data = request.get_json()
     try:
+        stmt = select(Category).where(Category.id == _id)
+        # Exception at select statement
+        current_category = db.session.execute(stmt).scalars().one()
+
         update_object = categorySchema.load(data)
         stmt_update = update(Category) \
             .where(Category.id == _id) \
@@ -66,10 +70,6 @@ def update_category(_id):
         db.session.execute(stmt_update)
         db.session.commit()
 
-        stmt = select(Category).where(Category.id == _id)
-        # Exception at select statement
-        current_category = db.session.execute(stmt).scalars().one()
-        db.session.commit()
     except NoResultFound as e:
         return JsonResponse.message(e), 404
     except ValidationError as e:
