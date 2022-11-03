@@ -47,6 +47,49 @@ class SubscriptionChannel(db.Model):
             -- ChannelId: {self.snippet_channel_id}
         >'''
 
+    def get_subscription_id(self):
+        return self.subscription_id
 
+    def get_subscription_etag(self):
+        return self.subscription_etag
 
+    def get_title(self):
+        return self.title
+
+    def get_description(self):
+        return self.description
+
+    def get_resource_channel_id(self):
+        return self.resource_channel_id
+
+    def get_snippet_channel_id(self):
+        return self.snippet_channel_id
+
+    def get_thumbnails_default_url(self):
+        return self.thumbnails_default_url
+
+    def get_thumbnails_medium_url(self):
+        return self.thumbnails_medium_url
+
+    def get_thumbnails_high_url(self):
+        return self.thumbnails_high_url
+
+    def get_total_item_count(self):
+        return self.total_item_count
+
+    @staticmethod
+    def to_dict(self):
+        return {
+            "subscription_etag": self.subscription_etag,
+            "subscription_id": self.subscription_id,
+            "title": self.title,
+            "description": self.description,
+            # "resource_kind": self.resource_kind,
+            "resource_channel_id": self.resource_channel_id,
+            "snippet_channel_id": self.snippet_channel_id,
+            "thumbnails_default_url": self.thumbnails_default_url,
+            "thumbnails_medium_url": self.thumbnails_medium_url,
+            "thumbnails_high_url": self.thumbnails_high_url,
+            "total_item_count": self.total_item_count
+        }
 

@@ -26,7 +26,7 @@ subscriptionChannelFetchSchema = SubscriptionChannelFetchSchema()
 subscriptionChannelUpdateCategorySchema = SubscriptionChannelUpdateCategorySchema()
 
 
-@bp.route('/fetch_subscriptions')
+@bp.route('/fetch_subscriptions')  # Only fetch records from ytube
 def fetch_subscriptions():
     if 'credentials' not in session:
         return redirect('authorize')
@@ -64,18 +64,103 @@ def fetch_subscriptions():
             f.write(json_object)
     print("=======Done writing to json file=======")
 
+    # Save credentials back to session in case access token was refreshed.
+    # ACTION ITEM: In a production app, you likely want to save these
+    #              credentials in a persistent database instead.
+    session['credentials'] = credentials_to_dict(credentials)
+
+    return jsonify(**yt_request)
+
+
+@bp.route('/fetch_subscriptions_save')  # Fetch and save to DB
+def fetch_subscriptions_test():
+    if 'credentials' not in session:
+        return redirect('authorize')
+
+    # Load credentials from the session.
+    credentials = google.oauth2.credentials.Credentials(
+        **session['credentials'])
+
+    youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+    extra_parameters = {"part": "snippet, contentDetails", "maxResults": 50, "mine": True, "pageToken": ""}
+    list_data = []
+    while True:
+        print("=======Call Youtube API=======")
+        yt_request = youtube.subscriptions().list(
+            part=extra_parameters['part'],
+            maxResults=extra_parameters['maxResults'],
+            mine=extra_parameters['mine'],
+            pageToken=extra_parameters['pageToken']
+        ).execute()
+
+        list_data.append(yt_request)
+        if "nextPageToken" in yt_request:
+            next_page_token = yt_request['nextPageToken']
+            print(f"======{next_page_token}======")
+            extra_parameters['pageToken'] = next_page_token
+        else:
+            print("=======No more pageToken=======")
+            break
+
+    stmt = select(SubscriptionChannel)
+    subscription_channels = db.session.execute(stmt).scalars()
+    db_result = subscriptionChannelSchema.dump(subscription_channels, many=True)
+    db_result_compare_dict = {}
+
+    # Add results to a dictionary
+    for db_item in db_result:
+        db_item.pop('id')  # Remove unnecessary fields to compare and update
+        db_item.pop('category_id')
+        db_item.pop('published_at')
+        db_item.pop('resource_kind')
+        db_result_compare_dict[db_item['subscription_id']] = db_item
+
+    db_count = 0
+    yt_count = 0
+    dict_equal_count = 0
+    dict_not_equal_count = 0
     for yt_page in list_data:
         for item in yt_page['items']:
             try:
                 channel = subscriptionChannelFetchSchema.load(item, many=False)
-                pprint("======================")
-                pprint(channel)
-                db.session.add(channel)
+                subscription_id = channel.get_subscription_id()
+                if subscription_id in db_result_compare_dict:
+                    db_count += 1
+                    # Compare dict DB vs dict Channel object
+                    if db_result_compare_dict[subscription_id] == SubscriptionChannel.to_dict(channel):
+                        # Dict equals, no change needed to update to DB
+                        dict_equal_count += 1
+                    else:
+                        dict_not_equal_count += 1
+                        stmt_update = update(SubscriptionChannel) \
+                            .where(SubscriptionChannel.subscription_id == subscription_id) \
+                            .values(
+                            {
+                                SubscriptionChannel.subscription_etag: channel.get_subscription_etag(),
+                                SubscriptionChannel.title: channel.get_title(),
+                                SubscriptionChannel.description: channel.get_description(),
+                                SubscriptionChannel.resource_channel_id: channel.get_resource_channel_id(),
+                                SubscriptionChannel.snippet_channel_id: channel.get_snippet_channel_id(),
+                                SubscriptionChannel.thumbnails_default_url: channel.get_thumbnails_default_url(),
+                                SubscriptionChannel.thumbnails_medium_url: channel.get_thumbnails_medium_url(),
+                                SubscriptionChannel.thumbnails_high_url: channel.get_thumbnails_high_url(),
+                                SubscriptionChannel.total_item_count: channel.get_total_item_count()
+                            }
+                        )
+                        db.session.execute(stmt_update)
+                else:
+                    yt_count += 1
+                    print("New records found, add to DB")
+                    pass
             except ValidationError as e:
                 db.session.rollback()
                 return JsonResponse.message(e), 400
+
     db.session.commit()
-    # return JsonResponse.message_json()
+    print(f"dict equals count {dict_equal_count}")
+    print(f"dict not equal count {dict_not_equal_count}")
+    print(f"subscription in DB {db_count}")
+    print(f"new subscription in YT {yt_count}")
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
     #              credentials in a persistent database instead.
@@ -91,7 +176,7 @@ def list_subscription(_id):
         one_subscription = db.session.execute(stmt).scalars().one()
     except NoResultFound as e:
         return JsonResponse.message(e), 404
-    result = subscriptionChannelFetchSchema.dump(one_subscription)
+    result = subscriptionChannelSchema.dump(one_subscription)
     return JsonResponse.message_json(result)
 
 
@@ -99,7 +184,7 @@ def list_subscription(_id):
 def list_subscriptions():
     stmt = select(SubscriptionChannel)
     subscription_channel = db.session.execute(stmt).scalars()
-    result = subscriptionChannelFetchSchema.dump(subscription_channel, many=True)
+    result = subscriptionChannelSchema.dump(subscription_channel, many=True)
     return JsonResponse.message_json(result)
 
 
@@ -165,7 +250,7 @@ def oauth2callback():
     credentials = flow.credentials
     session['credentials'] = credentials_to_dict(credentials)
 
-    return redirect(url_for('api.list_subscriptions'))
+    return redirect(url_for('api.fetch_subscriptions'))
 
 
 def credentials_to_dict(credentials):
