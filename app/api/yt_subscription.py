@@ -4,7 +4,7 @@ from flask import redirect, session, url_for, jsonify, request
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
 from marshmallow import ValidationError
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.exc import NoResultFound
 
 from app.messages import JsonResponse
@@ -50,19 +50,17 @@ def fetch_subscriptions():
         list_data.append(yt_request)
         if "nextPageToken" in yt_request:
             next_page_token = yt_request['nextPageToken']
-            print(f"======{next_page_token}======")
             extra_parameters['pageToken'] = next_page_token
         else:
-            print("=======No more pageToken=======")
             break
 
-    print("=======Write to json file=======")
-    # append file mode
-    with open(Config.YT_DATA, 'a') as f:
-        for yt_page in list_data:
-            json_object = json.dumps(yt_page, indent=4)
-            f.write(json_object)
-    print("=======Done writing to json file=======")
+    # print("=======Write to json file=======")
+    # # append file mode
+    # with open(Config.YT_DATA, 'a') as f:
+    #     for yt_page in list_data:
+    #         json_object = json.dumps(yt_page, indent=4)
+    #         f.write(json_object)
+    # print("=======Done writing to json file=======")
 
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
@@ -96,10 +94,8 @@ def fetch_subscriptions_test():
         list_data.append(yt_request)
         if "nextPageToken" in yt_request:
             next_page_token = yt_request['nextPageToken']
-            print(f"======{next_page_token}======")
             extra_parameters['pageToken'] = next_page_token
         else:
-            print("=======No more pageToken=======")
             break
 
     stmt = select(SubscriptionChannel)
@@ -115,23 +111,17 @@ def fetch_subscriptions_test():
         db_item.pop('resource_kind')
         db_result_compare_dict[db_item['subscription_id']] = db_item
 
-    db_count = 0
-    yt_count = 0
-    dict_equal_count = 0
-    dict_not_equal_count = 0
     for yt_page in list_data:
         for item in yt_page['items']:
             try:
                 channel = subscriptionChannelFetchSchema.load(item, many=False)
                 subscription_id = channel.get_subscription_id()
                 if subscription_id in db_result_compare_dict:
-                    db_count += 1
                     # Compare dict DB vs dict Channel object
                     if db_result_compare_dict[subscription_id] == SubscriptionChannel.to_dict(channel):
                         # Dict equals, no change needed to update to DB
-                        dict_equal_count += 1
+                        pass
                     else:
-                        dict_not_equal_count += 1
                         stmt_update = update(SubscriptionChannel) \
                             .where(SubscriptionChannel.subscription_id == subscription_id) \
                             .values(
@@ -149,18 +139,28 @@ def fetch_subscriptions_test():
                         )
                         db.session.execute(stmt_update)
                 else:
-                    yt_count += 1
+                    db.session.add(channel)
                     print("New records found, add to DB")
-                    pass
             except ValidationError as e:
                 db.session.rollback()
                 return JsonResponse.message(e), 400
 
     db.session.commit()
-    print(f"dict equals count {dict_equal_count}")
-    print(f"dict not equal count {dict_not_equal_count}")
-    print(f"subscription in DB {db_count}")
-    print(f"new subscription in YT {yt_count}")
+
+    yt_result_compare_dict = {}
+    for yt_page in list_data:
+        for item in yt_page['items']:
+            yt_result_compare_dict[item['subscription_id']] = item
+    # Delete records no longer in YT subscription from DB
+    for sub_id in db_result_compare_dict.keys():
+        if sub_id not in yt_result_compare_dict:
+            stmt = delete(SubscriptionChannel).where(SubscriptionChannel.subscription_id == sub_id)
+            db.session.execute(stmt)
+        else:
+            pass
+
+    db.session.commit()
+
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
     #              credentials in a persistent database instead.
@@ -255,8 +255,8 @@ def oauth2callback():
 
 def credentials_to_dict(credentials):
     return {'token': credentials.token,
-              'refresh_token': credentials.refresh_token,
-              'token_uri': credentials.token_uri,
-              'client_id': credentials.client_id,
-              'client_secret': credentials.client_secret,
-              'scopes': credentials.scopes}
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes}
